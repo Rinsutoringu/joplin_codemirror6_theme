@@ -28,31 +28,6 @@
   --mark-color: #e95f59;
 }
 
-/* inline 代码块样式 */
-.cm-inlineCode {
-  padding: 1.3px 3px !important;
-  border-radius: 6px !important;
-  margin-left: 5px !important;
-  margin-right: 5px !important;
-  margin-bottom: 5px !important;
-  color: #d63200 !important;
-}
-
-/* 一级标题样式 */
-.cm-line .tok-heading.tok-heading1 {
-  font-size: 2.1em !important;
-  font-weight: bold !important;
-}
-
-.cm-line:has(.tok-heading.tok-heading1) {
-  padding-bottom: 0.3em !important;
-  border-bottom: 2px solid #ddd !important;
-  margin-bottom: 0.5em !important;
-}
-
-/* 二级标题样式 */
-.cm-line:has(.tok-heading.tok-heading2) {
-  padding-bottom: 0.3em !important;
-  border-bottom: 1px solid #e0e0e0 !important;
-  margin-bottom: 0.5em !important;
+.cm-editor .cm-blockQuote {
+  opacity: 1 !important;
 }
