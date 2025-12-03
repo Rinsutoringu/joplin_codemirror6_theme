@@ -1,0 +1,58 @@
+/* 颜色变量 */
+.cm-editor {
+  --text-color: #333333;
+  --bg-color: #ffffff;
+  --blockquote-border-color: #e95f59;
+  --blockquote-bg-color: #fdefee;
+  --blockquote-color: var(--text-color);
+  --code-block-bg-color: #f3f3f3;
+  --formulas-block-bg-color: #ffffff;
+  --code-block-color: #24292e;
+  --table-border-color: #dfe2e5;
+  --table-header-bg-color: #f8f8f8;
+  --table-bg-color: #ffffff;
+  --table-n2-bg-color: #f8f8f8;
+  --a-color: #d63200;
+  --strong-color: var(--text-color);
+  --title-color: #273849;
+  --note-border-color: #3e69d7;
+  --note-bg-color: rgba(62, 105, 215, 0.06);
+  --tip-border-color: #03b736;
+  --tip-bg-color: rgba(3, 183, 54, 0.06);
+  --important-border-color: #8250df;
+  --important-bg-color: rgba(130, 80, 223, 0.06);
+  --warning-border-color: #e30f2e;
+  --warning-bg-color: rgba(227, 15, 46, 0.06);
+  --caution-border-color: #f59102;
+  --caution-bg-color: rgba(245, 145, 2, 0.06);
+  --mark-color: #e95f59;
+}
+
+/* inline 代码块样式 */
+.cm-inlineCode {
+  padding: 1.3px 3px !important;
+  border-radius: 6px !important;
+  margin-left: 5px !important;
+  margin-right: 5px !important;
+  margin-bottom: 5px !important;
+  color: #d63200 !important;
+}
+
+/* 一级标题样式 */
+.cm-line .tok-heading.tok-heading1 {
+  font-size: 2.1em !important;
+  font-weight: bold !important;
+}
+
+.cm-line:has(.tok-heading.tok-heading1) {
+  padding-bottom: 0.3em !important;
+  border-bottom: 2px solid #ddd !important;
+  margin-bottom: 0.5em !important;
+}
+
+/* 二级标题样式 */
+.cm-line:has(.tok-heading.tok-heading2) {
+  padding-bottom: 0.3em !important;
+  border-bottom: 1px solid #e0e0e0 !important;
+  margin-bottom: 0.5em !important;
+}
