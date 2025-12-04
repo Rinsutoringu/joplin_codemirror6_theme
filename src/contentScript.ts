@@ -67,15 +67,17 @@ const createDecorationPlugin = () => ViewPlugin.fromClass(class {
                         });
                         builder.add(line.from, line.from, lineDeco);
 
-                        // 为整个 [!TYPE] 添加样式
-                        const matchStart = line.from + text.indexOf('[!');
-                        const matchEnd = line.from + text.indexOf(']') + 1;
-                        const markDeco = Decoration.mark({
-                            attributes: {
-                                style: `color: ${config.color}; font-weight: 500; font-size: 0.85em; font-weight: bold; `
-                            }
-                        });
-                        builder.add(matchStart, matchEnd, markDeco);
+                        // 只为 TYPE 文本添加样式，避免影响括号匹配
+                        const typeStart = line.from + text.indexOf('[!') + 2;
+                        const typeEnd = line.from + text.indexOf(']');
+                        if (typeEnd > typeStart) {
+                            const markDeco = Decoration.mark({
+                                attributes: {
+                                    style: `color: ${config.color}; font-weight: 500; font-size: 0.85em; font-weight: bold;`
+                                }
+                            });
+                            builder.add(typeStart, typeEnd, markDeco);
+                        }
                     }
                     continue;
                 }
