@@ -1,6 +1,7 @@
 {
   "name": "joplin-plugin-codemirror6-theme",
   "version": "2.0.1",
+  "description": "Enhanced CodeMirror 6 theme with styling, keyboard shortcuts, and table editing tools for Joplin",
   "scripts": {
     "dist": "webpack --env joplin-plugin-config=buildMain && webpack --env joplin-plugin-config=buildExtraScripts && webpack --env joplin-plugin-config=createArchive",
     "prepare": "npm run dist",
@@ -9,7 +10,12 @@
   },
   "license": "MIT",
   "keywords": [
-    "joplin-plugin"
+    "joplin-plugin",
+    "theme",
+    "codemirror6",
+    "keyboard-shortcuts",
+    "table-editing",
+    "markdown"
   ],
   "files": [
     "publish"

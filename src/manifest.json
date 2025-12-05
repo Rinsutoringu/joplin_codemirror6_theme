@@ -4,7 +4,7 @@
 	"app_min_version": "2.8",
 	"version": "1.0.3",
 	"name": "codemirror6 theme",
-	"description": "A theme for joplin",
+	"description": "Enhanced CodeMirror 6 theme with styling for headings, code, links, GitHub alerts, blockquotes, and table rendering. Includes keyboard shortcuts for heading levels (Ctrl+1-6), inline math notation (Ctrl+$), and comprehensive table editing tools.",
 	"author": "RinChord",
 	"homepage_url": "https://github.com/Rinsutoringu/joplin_codemirror6_theme",
 	"repository_url": "https://github.com/Rinsutoringu/joplin_codemirror6_theme",
