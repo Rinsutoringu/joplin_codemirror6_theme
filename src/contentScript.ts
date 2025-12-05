@@ -4,6 +4,7 @@ import { syntaxTree } from '@codemirror/language';
 import { headingCommands } from './headingCommands';
 import { tableEditCommands } from './tableEditCommands';
 import { tableToolbarState, toggleTableToolbar } from './tableToolbarPanel';
+import { toggleInlineMath } from './mathCommands';
 
 // 声明 CodeMirror 全局对象
 declare const CodeMirror: any;
@@ -35,6 +36,23 @@ let pluginSettings = {
     enableTableRendering: true,
 };
 
+// 检查指定行是否在代码块内
+function isLineInCodeBlock(doc: any, lineNum: number): boolean {
+    let inCodeBlock = false;
+    
+    for (let i = 1; i <= lineNum; i++) {
+        const line = doc.line(i);
+        const text = line.text.trim();
+        
+        // 检测代码块开始或结束（```）
+        if (text.startsWith('```')) {
+            inCodeBlock = !inCodeBlock;
+        }
+    }
+    
+    return inCodeBlock;
+}
+
 // 创建装饰插件来高亮 GitHub Alerts 和标题
 const createDecorationPlugin = () => ViewPlugin.fromClass(class {
     decorations: DecorationSet;
@@ -56,6 +74,11 @@ const createDecorationPlugin = () => ViewPlugin.fromClass(class {
         for (let i = 1; i <= doc.lines; i++) {
             const line = doc.line(i);
             const text = line.text;
+            
+            // 如果在代码块内，跳过所有样式应用
+            if (isLineInCodeBlock(doc, i)) {
+                continue;
+            }
 
             // 检测 GitHub Alert 语法: > [!TYPE]
             if (pluginSettings.enableGitHubAlerts) {
@@ -361,6 +384,11 @@ export default (context: { contentScriptId: string, postMessage: any }) => {
                 { key: 'Mod-Tab', run: tableEditCommands.addColumnRight },
             ]);
             
+            // 创建数学公式快捷键映射 (Ctrl+$)
+            const mathKeymap = keymap.of([
+                { key: 'Ctrl-Shift-4', run: toggleInlineMath }, // Ctrl+$ (Shift+4 = $)
+            ]);
+            
             // 在 codeMirrorWrapper 上注册表格命令
             codeMirrorWrapper.defineExtension('formatTable', function() {
                 const cm6 = (this as any)?.cm6;
@@ -523,11 +551,30 @@ export default (context: { contentScriptId: string, postMessage: any }) => {
                 return false;
             });
             
+            // 切换内联数学公式
+            codeMirrorWrapper.defineExtension('toggleInlineMath', function() {
+                console.log('toggleInlineMath called');
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    try {
+                        toggleInlineMath(view);
+                        return true;
+                    } catch (error) {
+                        console.error('Error in toggleInlineMath:', error);
+                        return false;
+                    }
+                }
+                console.warn('No view found for toggleInlineMath');
+                return false;
+            });
+            
             codeMirrorWrapper.addExtension([
                 customTheme, 
                 decorationPlugin, 
                 headingKeymap, 
                 tableKeymap,
+                mathKeymap,
                 tableToolbarState
             ]);
         },

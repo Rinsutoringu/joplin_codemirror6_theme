@@ -284,6 +284,18 @@ joplin.plugins.register({
            }
        });
        
+       // 注册数学公式快捷键命令
+       await joplin.commands.register({
+           name: 'toggleInlineMath',
+           label: '在选中内容两侧添加 $',
+           enabledCondition: 'markdownEditorPaneVisible',
+           execute: async () => {
+               await joplin.commands.execute('editor.execCommand', {
+                   name: 'toggleInlineMath'
+               });
+           }
+       });
+       
        // 在 Tools 菜单只添加一个入口 - 表格编辑工具
        await joplin.views.menuItems.create('openTableDialogItem', 'openTableDialog', MenuItemLocation.Tools);
        
