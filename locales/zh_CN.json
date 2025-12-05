@@ -1,0 +1,53 @@
+{
+  "settings": {
+    "section": "CodeMirror 6 主题",
+    "enableInlineCode": {
+      "label": "启用行内代码样式",
+      "description": "为行内代码添加背景色和特殊颜色"
+    },
+    "enableLinkColor": {
+      "label": "启用链接颜色",
+      "description": "为超链接和 URL 添加特殊颜色"
+    },
+    "enableGitHubAlerts": {
+      "label": "启用 GitHub Alerts",
+      "description": "为 GitHub 风格的提示块添加样式（> [!NOTE]、> [!TIP] 等）"
+    },
+    "enableHeadingStyles": {
+      "label": "启用标题样式",
+      "description": "为 Markdown 标题（h1-h6）添加增强样式"
+    },
+    "enableBlockquoteStyles": {
+      "label": "启用引用块样式",
+      "description": "为普通引用块（blockquote）添加样式"
+    },
+    "enableTableRendering": {
+      "label": "启用表格渲染",
+      "description": "在编辑器中直接渲染 Markdown 表格样式"
+    },
+    "inlineCodeColor": {
+      "label": "行内代码颜色",
+      "description": "行内代码的文字颜色（十六进制格式，如 #d63200）"
+    },
+    "linkColor": {
+      "label": "链接颜色",
+      "description": "超链接和 URL 的文字颜色（十六进制格式，如 #d63200）"
+    }
+  },
+  "openTableDialog": "表格编辑工具",
+  "tableFormatTable": "格式化表格",
+  "tableAddRowAbove": "在上方添加行",
+  "tableAddRowBelow": "在下方添加行",
+  "tableDeleteRow": "删除当前行",
+  "tableAddColumnLeft": "在左侧添加列",
+  "tableAddColumnRight": "在右侧添加列",
+  "tableDeleteColumn": "删除当前列",
+  "tableAlignLeft": "文本左对齐",
+  "tableAlignCenter": "文本居中对齐",
+  "tableAlignRight": "文本右对齐",
+  "tableAlignClear": "清除对齐",
+  "toggleInlineMath": "在选中内容两侧添加 $",
+  "contextMenu": {
+    "tableEditingTools": "📋 表格编辑工具..."
+  }
+}

@@ -1,0 +1,53 @@
+{
+  "settings": {
+    "section": "CodeMirror 6 Theme",
+    "enableInlineCode": {
+      "label": "Enable inline code styling",
+      "description": "Add background color and special color to inline code"
+    },
+    "enableLinkColor": {
+      "label": "Enable link color",
+      "description": "Apply special color to hyperlinks and URLs"
+    },
+    "enableGitHubAlerts": {
+      "label": "Enable GitHub Alerts",
+      "description": "Add styling for GitHub-style alert blocks (> [!NOTE], > [!TIP], etc.)"
+    },
+    "enableHeadingStyles": {
+      "label": "Enable heading styles",
+      "description": "Add enhanced styling for Markdown headings (h1-h6)"
+    },
+    "enableBlockquoteStyles": {
+      "label": "Enable blockquote styling",
+      "description": "Add styling for standard blockquote elements"
+    },
+    "enableTableRendering": {
+      "label": "Enable table rendering",
+      "description": "Render Markdown table styles directly in the editor"
+    },
+    "inlineCodeColor": {
+      "label": "Inline code color",
+      "description": "Text color for inline code (hexadecimal format, e.g. #d63200)"
+    },
+    "linkColor": {
+      "label": "Link color",
+      "description": "Text color for hyperlinks and URLs (hexadecimal format, e.g. #d63200)"
+    }
+  },
+  "openTableDialog": "Table Editing Tools",
+  "tableFormatTable": "Format table",
+  "tableAddRowAbove": "Add row above",
+  "tableAddRowBelow": "Add row below",
+  "tableDeleteRow": "Delete current row",
+  "tableAddColumnLeft": "Add column left",
+  "tableAddColumnRight": "Add column right",
+  "tableDeleteColumn": "Delete current column",
+  "tableAlignLeft": "Align text left",
+  "tableAlignCenter": "Align text center",
+  "tableAlignRight": "Align text right",
+  "tableAlignClear": "Clear alignment",
+  "toggleInlineMath": "Toggle $ around selected text",
+  "contextMenu": {
+    "tableEditingTools": "📋 Table Editing Tools..."
+  }
+}

@@ -218,6 +218,12 @@ const pluginConfig = { ...baseConfig, entry: './src/index.ts',
 						],
 					},
 				},
+				// Copy locales folder
+				{
+					from: '**/*',
+					context: path.resolve(__dirname, 'locales'),
+					to: path.resolve(__dirname, 'dist', 'locales'),
+				},
 			],
 		}),
 	] };

@@ -1,6 +1,12 @@
 # CodeMirror 6 Theme for Joplin
 
-Enhanced editor styling and productivity features for Joplin notes.
+Enhanced editor styling and productivity features for Joplin notes. Support English and Chinese language.
+
+
+![alt text](image-4.png)
+![alt text](image-5.png)
+![alt text](image-1.png)
+
 
 ## Features
 

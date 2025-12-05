@@ -1,12 +1,16 @@
 import joplin from 'api';
 import { ContentScriptType, SettingItemType, MenuItemLocation } from 'api/types';
 import { getTableDialogHtml } from './tableDialog';
+import { initI18n, t } from './i18n';
 
 joplin.plugins.register({
 	onStart: async function() {
+		// Initialize i18n
+		await initI18n();
+
 		// 注册设置选项
 		await joplin.settings.registerSection('codemirror6Theme', {
-			label: 'CodeMirror 6 Theme',
+			label: t('settings.section'),
 			iconName: 'fas fa-palette',
 		});
 
@@ -17,64 +21,64 @@ joplin.plugins.register({
 				type: SettingItemType.Bool,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '启用行内代码样式',
-				description: '为行内代码添加背景色和特殊颜色',
+				label: t('settings.enableInlineCode.label'),
+				description: t('settings.enableInlineCode.description'),
 			},
 			'enableLinkColor': {
 				value: true,
 				type: SettingItemType.Bool,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '启用链接颜色',
-				description: '为超链接和 URL 添加特殊颜色',
+				label: t('settings.enableLinkColor.label'),
+				description: t('settings.enableLinkColor.description'),
 			},
 			'enableGitHubAlerts': {
 				value: true,
 				type: SettingItemType.Bool,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '启用 GitHub Alerts',
-				description: '为 GitHub 风格的提示块添加样式（> [!NOTE]、> [!TIP] 等）',
+				label: t('settings.enableGitHubAlerts.label'),
+				description: t('settings.enableGitHubAlerts.description'),
 			},
 			'enableHeadingStyles': {
 				value: true,
 				type: SettingItemType.Bool,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '启用标题样式',
-				description: '为 Markdown 标题（h1-h6）添加增强样式',
+				label: t('settings.enableHeadingStyles.label'),
+				description: t('settings.enableHeadingStyles.description'),
 			},
 			'enableBlockquoteStyles': {
 				value: true,
 				type: SettingItemType.Bool,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '启用引用块样式',
-				description: '为普通引用块（blockquote）添加样式',
+				label: t('settings.enableBlockquoteStyles.label'),
+				description: t('settings.enableBlockquoteStyles.description'),
 			},
 			'enableTableRendering': {
 				value: true,
 				type: SettingItemType.Bool,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '启用表格渲染',
-				description: '在编辑器中直接渲染 Markdown 表格样式',
+				label: t('settings.enableTableRendering.label'),
+				description: t('settings.enableTableRendering.description'),
 			},
 			'inlineCodeColor': {
 				value: '#d63200',
 				type: SettingItemType.String,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '行内代码颜色',
-				description: '行内代码的文字颜色（十六进制格式，如 #d63200）',
+				label: t('settings.inlineCodeColor.label'),
+				description: t('settings.inlineCodeColor.description'),
 			},
 			'linkColor': {
 				value: '#d63200',
 				type: SettingItemType.String,
 				section: 'codemirror6Theme',
 				public: true,
-				label: '链接颜色',
-				description: '超链接和 URL 的文字颜色（十六进制格式，如 #d63200）',
+				label: t('settings.linkColor.label'),
+				description: t('settings.linkColor.description'),
 			},
 		});
 
@@ -141,7 +145,7 @@ joplin.plugins.register({
        // 注册打开面板的命令(切换编辑器内嵌工具栏)
        await joplin.commands.register({
            name: 'openTableDialog',
-           label: '表格编辑工具',
+           label: t('commands.openTableDialog'),
            iconName: 'fas fa-table',
            execute: async () => {
                try {
@@ -160,7 +164,7 @@ joplin.plugins.register({
        // 注册表格编辑命令
        await joplin.commands.register({
            name: 'tableFormatTable',
-           label: '格式化表格',
+           label: t('commands.tableFormatTable'),
            iconName: 'fas fa-table',
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
@@ -173,7 +177,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAddRowAbove',
-           label: '在上方添加行',
+           label: t('commands.tableAddRowAbove'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -184,7 +188,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAddRowBelow',
-           label: '在下方添加行',
+           label: t('commands.tableAddRowBelow'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -195,7 +199,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableDeleteRow',
-           label: '删除当前行',
+           label: t('commands.tableDeleteRow'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -206,7 +210,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAddColumnLeft',
-           label: '在左侧添加列',
+           label: t('commands.tableAddColumnLeft'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -217,7 +221,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAddColumnRight',
-           label: '在右侧添加列',
+           label: t('commands.tableAddColumnRight'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -228,7 +232,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableDeleteColumn',
-           label: '删除当前列',
+           label: t('commands.tableDeleteColumn'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -239,7 +243,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAlignLeft',
-           label: '文本左对齐',
+           label: t('commands.tableAlignLeft'),
            iconName: 'fas fa-align-left',
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
@@ -251,7 +255,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAlignCenter',
-           label: '文本居中对齐',
+           label: t('commands.tableAlignCenter'),
            iconName: 'fas fa-align-center',
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
@@ -263,7 +267,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAlignRight',
-           label: '文本右对齐',
+           label: t('commands.tableAlignRight'),
            iconName: 'fas fa-align-right',
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
@@ -275,7 +279,7 @@ joplin.plugins.register({
        
        await joplin.commands.register({
            name: 'tableAlignClear',
-           label: '清除对齐',
+           label: t('commands.tableAlignClear'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -287,7 +291,7 @@ joplin.plugins.register({
        // 注册数学公式快捷键命令
        await joplin.commands.register({
            name: 'toggleInlineMath',
-           label: '在选中内容两侧添加 $',
+           label: t('commands.toggleInlineMath'),
            enabledCondition: 'markdownEditorPaneVisible',
            execute: async () => {
                await joplin.commands.execute('editor.execCommand', {
@@ -302,7 +306,7 @@ joplin.plugins.register({
        // 在右键菜单也只添加一个入口
        joplin.workspace.filterEditorContextMenu(async (object: any) => {
            object.items.push({ type: 'separator' });
-           object.items.push({ label: '📋 表格编辑工具...', commandName: 'openTableDialog' });
+           object.items.push({ label: t('contextMenu.tableEditingTools'), commandName: 'openTableDialog' });
            return object;
        });
 	},

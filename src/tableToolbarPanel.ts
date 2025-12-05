@@ -157,13 +157,13 @@ function createTableToolbarPanel(view: EditorView): Panel {
     };
     dom.appendChild(closeBtn);
     
-    // 标题
-    dom.appendChild(createLabel('表格'));
+    // Title
+    dom.appendChild(createLabel('Table'));
     
-    // 创建表格组
+    // Create table group
     const createGroup = document.createElement('div');
     createGroup.style.cssText = 'display: flex; align-items: center; gap: 3px;';
-    createGroup.appendChild(createGroupLabel('创建:'));
+    createGroup.appendChild(createGroupLabel('Create:'));
     
     const colsInput = createInput('cm-table-cols', '3', '40px');
     createGroup.appendChild(colsInput);
@@ -177,7 +177,7 @@ function createTableToolbarPanel(view: EditorView): Panel {
     createGroup.appendChild(rowsInput);
     
     const createBtn = document.createElement('button');
-    createBtn.textContent = '创建';
+    createBtn.textContent = 'Create';
     createBtn.className = 'cm-table-toolbar-button cm-primary-button';
     createBtn.style.cssText = `
         padding: 4px 8px;
@@ -202,7 +202,7 @@ function createTableToolbarPanel(view: EditorView): Panel {
         const cols = parseInt(colsInput.value) || 3;
         const rows = parseInt(rowsInput.value) || 3;
         
-        // 生成表格
+        // Generate table
         const headerRow = '| ' + Array(cols).fill('Header').join(' | ') + ' |';
         const separatorRow = '| ' + Array(cols).fill('---').join(' | ') + ' |';
         const dataRows = Array(rows).fill(null).map(() => 
@@ -223,38 +223,38 @@ function createTableToolbarPanel(view: EditorView): Panel {
     dom.appendChild(createGroup);
     dom.appendChild(createDivider());
     
-    // 格式化
-    dom.appendChild(createButton('格式化', '格式化表格', tableEditCommands.formatTable));
+    // Format
+    dom.appendChild(createButton('Format', 'Format table', tableEditCommands.formatTable));
     dom.appendChild(createDivider());
     
-    // 行操作组
+    // Row operations group
     const rowGroup = document.createElement('div');
     rowGroup.style.cssText = 'display: flex; align-items: center; gap: 3px;';
-    rowGroup.appendChild(createGroupLabel('行:'));
-    rowGroup.appendChild(createButton('↑插入', '上方插入行', tableEditCommands.addRowAbove));
-    rowGroup.appendChild(createButton('↓插入', '下方插入行', tableEditCommands.addRowBelow));
-    rowGroup.appendChild(createButton('删除', '删除行', tableEditCommands.deleteRow));
+    rowGroup.appendChild(createGroupLabel('Row:'));
+    rowGroup.appendChild(createButton('↑Insert', 'Insert row above', tableEditCommands.addRowAbove));
+    rowGroup.appendChild(createButton('↓Insert', 'Insert row below', tableEditCommands.addRowBelow));
+    rowGroup.appendChild(createButton('Delete', 'Delete row', tableEditCommands.deleteRow));
     dom.appendChild(rowGroup);
     dom.appendChild(createDivider());
     
-    // 列操作组
+    // Column operations group
     const colGroup = document.createElement('div');
     colGroup.style.cssText = 'display: flex; align-items: center; gap: 3px;';
-    colGroup.appendChild(createGroupLabel('列:'));
-    colGroup.appendChild(createButton('←插入', '左侧插入列', tableEditCommands.addColumnLeft));
-    colGroup.appendChild(createButton('→插入', '右侧插入列', tableEditCommands.addColumnRight));
-    colGroup.appendChild(createButton('删除', '删除列', tableEditCommands.deleteColumn));
+    colGroup.appendChild(createGroupLabel('Col:'));
+    colGroup.appendChild(createButton('←Insert', 'Insert column left', tableEditCommands.addColumnLeft));
+    colGroup.appendChild(createButton('→Insert', 'Insert column right', tableEditCommands.addColumnRight));
+    colGroup.appendChild(createButton('Delete', 'Delete column', tableEditCommands.deleteColumn));
     dom.appendChild(colGroup);
     dom.appendChild(createDivider());
     
-    // 对齐操作组
+    // Alignment operations group
     const alignGroup = document.createElement('div');
     alignGroup.style.cssText = 'display: flex; align-items: center; gap: 3px;';
-    alignGroup.appendChild(createGroupLabel('对齐:'));
-    alignGroup.appendChild(createButton('⬅', '左对齐', tableEditCommands.alignLeft));
-    alignGroup.appendChild(createButton('⬌', '居中', tableEditCommands.alignCenter));
-    alignGroup.appendChild(createButton('➡', '右对齐', tableEditCommands.alignRight));
-    alignGroup.appendChild(createButton('清除', '清除对齐', tableEditCommands.alignClear));
+    alignGroup.appendChild(createGroupLabel('Align:'));
+    alignGroup.appendChild(createButton('⬅', 'Align left', tableEditCommands.alignLeft));
+    alignGroup.appendChild(createButton('⬌', 'Align center', tableEditCommands.alignCenter));
+    alignGroup.appendChild(createButton('➡', 'Align right', tableEditCommands.alignRight));
+    alignGroup.appendChild(createButton('Clear', 'Clear alignment', tableEditCommands.alignClear));
     dom.appendChild(alignGroup);
     
     return {
