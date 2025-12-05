@@ -31,6 +31,8 @@
     "webpack-cli": "^4.10.0"
   },
   "dependencies": {
-    "markdown-it-github-alerts": "^1.0.0"
+    "@felisdiligens/md-table-tools": "^0.2.0",
+    "markdown-it-github-alerts": "^1.0.0",
+    "turndown": "^7.2.2"
   }
 }

@@ -66,6 +66,10 @@ The plugin package will be generated in the `publish/` directory.
 
 For more development information, see [GENERATOR_DOC.md](./GENERATOR_DOC.md)
 
+## TODO
+
+- 把指定笔记的.md源文件和该笔记的附件导出到同一个指定目录，确保附件的文件内超链接也被同步更新，以便于在外部编辑器直接查看。支持多选笔记，多选笔记时将有两种行为：所有笔记源文件和附件都导入同一目录\以文件夹为单位导出各笔记，保留Front Matter，这个行为将存在一个可配置选项，可以在插件设置中更改。
+
 ## License
 
 MIT

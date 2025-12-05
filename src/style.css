@@ -31,3 +31,20 @@
 .cm-editor .cm-blockQuote {
   opacity: 1 !important;
 }
+
+/* 确保选区高亮显示在表格装饰之上 */
+.cm-editor .cm-selectionBackground {
+  background-color: rgba(181, 213, 255, 0.8) !important;
+  z-index: 1 !important;
+}
+
+.cm-editor .cm-content ::selection {
+  background-color: rgba(181, 213, 255, 0.8) !important;
+}
+
+/* LaTeX 公式在表格中的样式优化 */
+.cm-editor .cm-content .cm-line .katex,
+.cm-editor .cm-content .cm-line .joplin-editable-resource {
+  display: inline-block;
+  vertical-align: middle;
+}

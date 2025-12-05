@@ -2,6 +2,11 @@ import { EditorView, Decoration, DecorationSet, ViewPlugin, ViewUpdate, keymap }
 import { RangeSetBuilder } from '@codemirror/state';
 import { syntaxTree } from '@codemirror/language';
 import { headingCommands } from './headingCommands';
+import { tableEditCommands } from './tableEditCommands';
+import { tableToolbarState, toggleTableToolbar } from './tableToolbarPanel';
+
+// 声明 CodeMirror 全局对象
+declare const CodeMirror: any;
 
 // 定义 alert 类型和对应的颜色
 const alertTypes = {
@@ -27,6 +32,7 @@ let pluginSettings = {
     enableGitHubAlerts: true,
     enableHeadingStyles: true,
     enableBlockquoteStyles: true,
+    enableTableRendering: true,
 };
 
 // 创建装饰插件来高亮 GitHub Alerts 和标题
@@ -157,7 +163,118 @@ const createDecorationPlugin = () => ViewPlugin.fromClass(class {
             }
         }
 
+        // 检测并渲染表格
+        if (pluginSettings.enableTableRendering) {
+            this.renderTables(doc, builder);
+        }
+
         return builder.finish();
+    }
+
+    renderTables(doc: any, builder: RangeSetBuilder<Decoration>) {
+        let i = 1;
+        while (i <= doc.lines) {
+            const line = doc.line(i);
+            const text = line.text;
+            
+            // 检测表格分隔行 (|---|---|)
+            if (text.match(/^\s*\|?[\s:]*-+[\s:]*\|/)) {
+                // 找到表格的起始和结束
+                let tableStart = i - 1;
+                let tableEnd = i + 1;
+                
+                // 向前查找表头
+                while (tableStart >= 1) {
+                    const prevLine = doc.line(tableStart);
+                    if (prevLine.text.match(/^\s*\|/)) {
+                        tableStart--;
+                    } else {
+                        tableStart++;
+                        break;
+                    }
+                }
+                if (tableStart < 1) tableStart = 1;
+                
+                // 向后查找表格内容
+                while (tableEnd <= doc.lines) {
+                    const nextLine = doc.line(tableEnd);
+                    if (nextLine.text.match(/^\s*\|/)) {
+                        tableEnd++;
+                    } else {
+                        tableEnd--;
+                        break;
+                    }
+                }
+                if (tableEnd > doc.lines) tableEnd = doc.lines;
+                
+                // 为表格的每一行添加样式
+                for (let j = tableStart; j <= tableEnd; j++) {
+                    const tableLine = doc.line(j);
+                    const isHeader = j < i;
+                    const isDivider = j === i;
+                    const isFirstRow = j === tableStart;
+                    const isLastRow = j === tableEnd;
+                    // 数据行索引（分隔行之后的行数）
+                    const dataRowIndex = j > i ? (j - i - 1) : 0;
+                    const isEvenDataRow = dataRowIndex % 2 === 0;
+                    
+                    let style = '';
+                    
+                    if (isDivider) {
+                        // 分隔行：极窄，只显示边框
+                        style += 'height: 4px; line-height: 4px; font-size: 2px; color: #d0d7de; background-color: #e1e4e8; border-top: 1px solid #d0d7de; border-bottom: 1px solid #d0d7de; overflow: hidden;';
+                    } else if (isHeader) {
+                        // 表头行：稍大字体，加粗，浅灰背景
+                        style += 'font-size: 1.05em; font-weight: 600; background-color: #f6f8fa; padding: 10px 0;';
+                        if (isFirstRow) {
+                            style += ' border-top: 2px solid #d0d7de;';
+                        }
+                    } else {
+                        // 数据行：交替背景色，第一行从白色开始
+                        const bgColor = isEvenDataRow ? '#ffffff' : '#f8f8f8';
+                        style += `background-color: ${bgColor}; padding: 8px 0;`;
+                        if (isLastRow) {
+                            style += ' border-bottom: 2px solid #d0d7de;';
+                        }
+                    }
+                    
+                    const lineDeco = Decoration.line({
+                        attributes: {
+                            style: style
+                        }
+                    });
+                    builder.add(tableLine.from, tableLine.from, lineDeco);
+                    
+                    // 美化表格分隔符 | - 让它们看起来像连续的竖线
+                    const pipeMatches = [...tableLine.text.matchAll(/\|/g)];
+                    for (const match of pipeMatches) {
+                        if (match.index !== undefined) {
+                            const pipePos = tableLine.from + match.index;
+                            let pipeStyle = '';
+                            
+                            if (isDivider) {
+                                // 分隔行的管道符：更宽的分隔线，上下延伸覆盖整行
+                                pipeStyle = 'color: transparent; background: linear-gradient(to right, transparent 40%, #c0c5cc 40%, #c0c5cc 60%, transparent 60%); padding: 0 6px; margin: 0 4px; display: inline-block; height: 100%;';
+                            } else {
+                                // 普通行的管道符：用更宽的边框模拟竖线
+                                pipeStyle = 'color: transparent; border-left: 2px solid #c0c5cc; padding: 0 7px; margin: 0 3px; box-sizing: border-box; display: inline-block;';
+                            }
+                            
+                            const pipeDeco = Decoration.mark({
+                                attributes: {
+                                    style: pipeStyle
+                                }
+                            });
+                            builder.add(pipePos, pipePos + 1, pipeDeco);
+                        }
+                    }
+                }
+                
+                i = tableEnd + 1;
+                continue;
+            }
+            i++;
+        }
     }
 }, {
     decorations: v => v.decorations
@@ -172,6 +289,7 @@ export default (context: { contentScriptId: string, postMessage: any }) => {
                 pluginSettings.enableGitHubAlerts = settings.enableGitHubAlerts;
                 pluginSettings.enableHeadingStyles = settings.enableHeadingStyles;
                 pluginSettings.enableBlockquoteStyles = settings.enableBlockquoteStyles;
+                pluginSettings.enableTableRendering = settings.enableTableRendering;
             }
 
             const enableInlineCode = settings ? settings.enableInlineCode : true;
@@ -236,10 +354,185 @@ export default (context: { contentScriptId: string, postMessage: any }) => {
                 { key: 'Ctrl-6', run: headingCommands.toggleHeading6 },
             ]);
             
-            codeMirrorWrapper.addExtension([customTheme, decorationPlugin, headingKeymap]);
+            // 创建表格编辑快捷键映射
+            const tableKeymap = keymap.of([
+                { key: 'Mod-Shift-f', run: tableEditCommands.formatTable },
+                { key: 'Mod-Enter', run: tableEditCommands.addRowBelow },
+                { key: 'Mod-Tab', run: tableEditCommands.addColumnRight },
+            ]);
+            
+            // 在 codeMirrorWrapper 上注册表格命令
+            codeMirrorWrapper.defineExtension('formatTable', function() {
+                const cm6 = (this as any)?.cm6;
+                // this.cm6 本身就是 EditorView
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.formatTable(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('addRowAbove', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.addRowAbove(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('addRowBelow', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.addRowBelow(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('deleteRow', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.deleteRow(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('addColumnLeft', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.addColumnLeft(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('addColumnRight', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.addColumnRight(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('deleteColumn', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.deleteColumn(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('alignLeft', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.alignLeft(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('alignCenter', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.alignCenter(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('alignRight', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.alignRight(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            codeMirrorWrapper.defineExtension('alignClear', function() {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    tableEditCommands.alignClear(view);
+                    return true;
+                }
+                return false;
+            });
+            
+            // 创建空表格
+            codeMirrorWrapper.defineExtension('createTable', function(cols: number, rows: number) {
+                const cm6 = (this as any)?.cm6;
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                if (view) {
+                    // 生成表格模板
+                    const headerRow = '| ' + Array(cols).fill('Header').join(' | ') + ' |';
+                    const separatorRow = '| ' + Array(cols).fill('---').join(' | ') + ' |';
+                    const dataRows = Array(rows).fill(null).map(() => 
+                        '| ' + Array(cols).fill('Cell').join(' | ') + ' |'
+                    ).join('\n');
+                    
+                    const tableText = `${headerRow}\n${separatorRow}\n${dataRows}\n`;
+                    
+                    // 插入到当前位置
+                    const pos = view.state.selection.main.head;
+                    view.dispatch({
+                        changes: { from: pos, to: pos, insert: tableText },
+                        selection: { anchor: pos + tableText.length }
+                    });
+                    return true;
+                }
+                return false;
+            });
+            
+            // 切换表格工具栏显示
+            codeMirrorWrapper.defineExtension('toggleTableToolbar', function() {
+                console.log('toggleTableToolbar called');
+                const cm6 = (this as any)?.cm6;
+                console.log('cm6:', cm6);
+                const view = cm6 instanceof EditorView ? cm6 : cm6?.view;
+                console.log('view:', view);
+                if (view) {
+                    try {
+                        const currentState = view.state.field(tableToolbarState);
+                        console.log('Current toolbar state:', currentState);
+                        view.dispatch({
+                            effects: toggleTableToolbar.of(!currentState)
+                        });
+                        console.log('Toggled to:', !currentState);
+                        return true;
+                    } catch (error) {
+                        console.error('Error in toggleTableToolbar:', error);
+                        return false;
+                    }
+                }
+                console.warn('No view found');
+                return false;
+            });
+            
+            codeMirrorWrapper.addExtension([
+                customTheme, 
+                decorationPlugin, 
+                headingKeymap, 
+                tableKeymap,
+                tableToolbarState
+            ]);
         },
         assets: () => {
             return [{ name: './style.css' }];
-        },
+        }
     };
 };
