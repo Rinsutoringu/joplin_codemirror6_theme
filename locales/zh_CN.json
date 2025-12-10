@@ -34,19 +34,26 @@
       "description": "超链接和 URL 的文字颜色（十六进制格式，如 #d63200）"
     }
   },
-  "openTableDialog": "表格编辑工具",
-  "tableFormatTable": "格式化表格",
-  "tableAddRowAbove": "在上方添加行",
-  "tableAddRowBelow": "在下方添加行",
-  "tableDeleteRow": "删除当前行",
-  "tableAddColumnLeft": "在左侧添加列",
-  "tableAddColumnRight": "在右侧添加列",
-  "tableDeleteColumn": "删除当前列",
-  "tableAlignLeft": "文本左对齐",
-  "tableAlignCenter": "文本居中对齐",
-  "tableAlignRight": "文本右对齐",
-  "tableAlignClear": "清除对齐",
-  "toggleInlineMath": "在选中内容两侧添加 $",
+  "commands": {
+    "openTableDialog": "表格编辑工具",
+    "tableFormatTable": "格式化表格",
+    "tableAddRowAbove": "在上方添加行",
+    "tableAddRowBelow": "在下方添加行",
+    "tableDeleteRow": "删除当前行",
+    "tableAddColumnLeft": "在左侧添加列",
+    "tableAddColumnRight": "在右侧添加列",
+    "tableDeleteColumn": "删除当前列",
+    "tableAlignLeft": "文本左对齐",
+    "tableAlignCenter": "文本居中对齐",
+    "tableAlignRight": "文本右对齐",
+    "tableAlignClear": "清除对齐",
+    "toggleInlineMath": "在选中内容两侧添加 $",
+    "toggleBlockquote": "切换引用块 (>)",
+    "toggleAlertNote": "切换 [!NOTE] 提示块",
+    "toggleAlertTip": "切换 [!TIP] 提示块",
+    "toggleAlertWarning": "切换 [!WARNING] 警告块",
+    "toggleAlertImportant": "切换 [!IMPORTANT] 重要块"
+  },
   "contextMenu": {
     "tableEditingTools": "📋 表格编辑工具..."
   }

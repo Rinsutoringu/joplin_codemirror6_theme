@@ -300,6 +300,63 @@ joplin.plugins.register({
            }
        });
        
+       // 注册引用块快捷键命令 (Ctrl+Shift+.)
+       await joplin.commands.register({
+           name: 'toggleBlockquote',
+           label: t('commands.toggleBlockquote'),
+           enabledCondition: 'markdownEditorPaneVisible',
+           execute: async () => {
+               await joplin.commands.execute('editor.execCommand', {
+                   name: 'toggleBlockquote'
+               });
+           }
+       });
+       
+       // 注册 GitHub Alert 快捷键命令
+       await joplin.commands.register({
+           name: 'toggleAlertNote',
+           label: t('commands.toggleAlertNote'),
+           enabledCondition: 'markdownEditorPaneVisible',
+           execute: async () => {
+               await joplin.commands.execute('editor.execCommand', {
+                   name: 'toggleAlertNote'
+               });
+           }
+       });
+       
+       await joplin.commands.register({
+           name: 'toggleAlertTip',
+           label: t('commands.toggleAlertTip'),
+           enabledCondition: 'markdownEditorPaneVisible',
+           execute: async () => {
+               await joplin.commands.execute('editor.execCommand', {
+                   name: 'toggleAlertTip'
+               });
+           }
+       });
+       
+       await joplin.commands.register({
+           name: 'toggleAlertWarning',
+           label: t('commands.toggleAlertWarning'),
+           enabledCondition: 'markdownEditorPaneVisible',
+           execute: async () => {
+               await joplin.commands.execute('editor.execCommand', {
+                   name: 'toggleAlertWarning'
+               });
+           }
+       });
+       
+       await joplin.commands.register({
+           name: 'toggleAlertImportant',
+           label: t('commands.toggleAlertImportant'),
+           enabledCondition: 'markdownEditorPaneVisible',
+           execute: async () => {
+               await joplin.commands.execute('editor.execCommand', {
+                   name: 'toggleAlertImportant'
+               });
+           }
+       });
+       
        // 在 Tools 菜单只添加一个入口 - 表格编辑工具
        await joplin.views.menuItems.create('openTableDialogItem', 'openTableDialog', MenuItemLocation.Tools);
        

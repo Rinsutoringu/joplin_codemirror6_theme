@@ -34,19 +34,26 @@
       "description": "Text color for hyperlinks and URLs (hexadecimal format, e.g. #d63200)"
     }
   },
-  "openTableDialog": "Table Editing Tools",
-  "tableFormatTable": "Format table",
-  "tableAddRowAbove": "Add row above",
-  "tableAddRowBelow": "Add row below",
-  "tableDeleteRow": "Delete current row",
-  "tableAddColumnLeft": "Add column left",
-  "tableAddColumnRight": "Add column right",
-  "tableDeleteColumn": "Delete current column",
-  "tableAlignLeft": "Align text left",
-  "tableAlignCenter": "Align text center",
-  "tableAlignRight": "Align text right",
-  "tableAlignClear": "Clear alignment",
-  "toggleInlineMath": "Toggle $ around selected text",
+  "commands": {
+    "openTableDialog": "Table Editing Tools",
+    "tableFormatTable": "Format table",
+    "tableAddRowAbove": "Add row above",
+    "tableAddRowBelow": "Add row below",
+    "tableDeleteRow": "Delete current row",
+    "tableAddColumnLeft": "Add column left",
+    "tableAddColumnRight": "Add column right",
+    "tableDeleteColumn": "Delete current column",
+    "tableAlignLeft": "Align text left",
+    "tableAlignCenter": "Align text center",
+    "tableAlignRight": "Align text right",
+    "tableAlignClear": "Clear alignment",
+    "toggleInlineMath": "Toggle $ around selected text",
+    "toggleBlockquote": "Toggle blockquote (>)",
+    "toggleAlertNote": "Toggle [!NOTE] alert",
+    "toggleAlertTip": "Toggle [!TIP] alert",
+    "toggleAlertWarning": "Toggle [!WARNING] alert",
+    "toggleAlertImportant": "Toggle [!IMPORTANT] alert"
+  },
   "contextMenu": {
     "tableEditingTools": "📋 Table Editing Tools..."
   }
