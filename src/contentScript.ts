@@ -6,6 +6,7 @@ import { tableEditCommands } from './tableEditCommands';
 import { tableToolbarState, toggleTableToolbar } from './tableToolbarPanel';
 import { toggleInlineMath } from './mathCommands';
 import { blockquoteCommands } from './blockquoteCommands';
+import { tableRenderPlugin } from './tableRenderPlugin';
 
 // 声明 CodeMirror 全局对象
 declare const CodeMirror: any;
@@ -55,360 +56,335 @@ const createDecorationPlugin = () => ViewPlugin.fromClass(class {
     buildDecorations(view: EditorView): DecorationSet {
         const builder = new RangeSetBuilder<Decoration>();
         const doc = view.state.doc;
-
-        // 如果文档太大，跳过装饰以避免性能问题
         const MAX_LINES = 2000;
         if (doc.lines > MAX_LINES) {
             return builder.finish();
         }
-
-        // 第一遍：快速扫描标记代码块、fence 行语言和 Alert 块
+        // 计算行首连续 > 的深度（支持 > 之间任意数量空格）
+        function getQuoteDepth(text: string): number {
+            let i = 0;
+            while (i < text.length && text[i] === ' ') i++;
+            let depth = 0;
+            while (i < text.length && text[i] === '>') {
+                depth++;
+                i++;
+                // 跳过 > 后任意数量空格
+                while (i < text.length && text[i] === ' ') i++;
+            }
+            return depth;
+        }
+        // 去掉行首 depth 层 > 前缀，返回剩余内容
+        function stripQuotePrefix(text: string, depth: number): string {
+            let s = text.trimStart();
+            for (let d = 0; d < depth; d++) {
+                if (s.startsWith('>')) {
+                    s = s.slice(1);
+                    // 跳过 > 后任意数量空格
+                    while (s.length > 0 && s[0] === ' ') s = s.slice(1);
+                }
+            }
+            return s;
+        }
+        // ── 第一遍扫描 ──────────────────────────────────────────────────────────
         const codeBlockLines = new Set<number>();
         const fenceLineLangs = new Map<number, string | null>();
-        const alertLineTypes = new Map<number, string>();
-        
-        let inCodeBlock = false;
-        let currentAlertType: string | null = null;
-        
+        // alertLineInfo: 行号 -> { type, depth }
+        const alertLineInfo = new Map<number, { type: string; depth: number }>();
+        // blockquoteLineDepths: 行号 -> 引用深度（1-based）
+        const blockquoteLineDepths = new Map<number, number>();
+        // quotedCodeLines: 引用块内的代码块行 -> { quoteDepth, isFence, lang? }
+        const quotedCodeLines = new Map<number, { quoteDepth: number; isFence: boolean; lang?: string }>();
+        // quoteCharPositions: 行号 -> 各层 > 字符的列偏移数组（按层级顺序）
+        const quoteCharPositions = new Map<number, number[]>();
+        let inGlobalCode = false;
+        let currentAlert: { type: string; depth: number } | null = null;
+        let currentBQDepth = 0;
+        let inQuotedCode = false;
+        let quotedCodeDepth = 0;
+        const pendingEmptyLines: number[] = [];
+        let pendingType: 'alert' | 'blockquote' | null = null;
+        // 解析行首各层 > 的列偏移（支持任意空格）
+        function parseQuotePositions(text: string): number[] {
+            const positions: number[] = [];
+            let idx = 0;
+            while (idx < text.length && text[idx] === ' ') idx++;
+            while (idx < text.length && text[idx] === '>') {
+                positions.push(idx);
+                idx++;
+                while (idx < text.length && text[idx] === ' ') idx++;
+            }
+            return positions;
+        }
         for (let i = 1; i <= doc.lines; i++) {
             const line = doc.line(i);
             const text = line.text;
             const trimmed = text.trimStart();
-            
-            // 检测代码块 fence 行（并记录可能的语言）
+            const depth = getQuoteDepth(text);
+            const isQuoteLine = depth > 0;
+            const isEmpty = trimmed === '';
+            // 记录 > 字符位置
+            if (isQuoteLine) {
+                quoteCharPositions.set(i, parseQuotePositions(text));
+            }
+            // ── 引用块内的代码块处理 ────────────────────────────────────────────
+            if (isQuoteLine) {
+                const inner = stripQuotePrefix(text, depth);
+                // ``` 代码块
+                const innerFence = inner.match(/^```(\S*)/);
+                if (innerFence && !inGlobalCode) {
+                    if (!inQuotedCode) {
+                        inQuotedCode = true;
+                        quotedCodeDepth = depth;
+                        const lang = innerFence[1] || null;
+                        quotedCodeLines.set(i, { quoteDepth: depth, isFence: true, lang: lang || undefined });
+                        continue;
+                    } else if (depth === quotedCodeDepth) {
+                        quotedCodeLines.set(i, { quoteDepth: depth, isFence: true });
+                        inQuotedCode = false;
+                        quotedCodeDepth = 0;
+                        continue;
+                    }
+                }
+                if (inQuotedCode && depth >= quotedCodeDepth) {
+                    quotedCodeLines.set(i, { quoteDepth: quotedCodeDepth, isFence: false });
+                    continue;
+                }
+            } else if (inQuotedCode && isEmpty) {
+                quotedCodeLines.set(i, { quoteDepth: quotedCodeDepth, isFence: false });
+                continue;
+            } else if (inQuotedCode && !isEmpty) {
+                inQuotedCode = false;
+                quotedCodeDepth = 0;
+            }
+            // ── 全局代码块 fence 行 ─────────────────────────────────────────────
             const fenceMatch = trimmed.match(/^```(\S*)/);
-            if (fenceMatch) {
+            if (fenceMatch && !isQuoteLine) {
                 const lang = fenceMatch[1] && fenceMatch[1].length ? fenceMatch[1] : null;
                 fenceLineLangs.set(i, lang);
-                inCodeBlock = !inCodeBlock;
+                inGlobalCode = !inGlobalCode;
                 codeBlockLines.add(i);
-            } else if (inCodeBlock) {
+                if (inGlobalCode) {
+                    pendingEmptyLines.length = 0;
+                    pendingType = null;
+                    currentAlert = null;
+                    currentBQDepth = 0;
+                }
+                continue;
+            } else if (inGlobalCode && !isQuoteLine) {
                 codeBlockLines.add(i);
-            }
-            
-            // 检测 Alert（不在代码块内，允许前导空格）
-            if (!inCodeBlock && pluginSettings.enableGitHubAlerts) {
-                if (trimmed.startsWith('> [!')) {
-                    const match = trimmed.match(/^>\s*\[!(\w+)\]/);
-                    if (match) {
-                        currentAlertType = match[1].toUpperCase();
-                        alertLineTypes.set(i, currentAlertType);
-                    }
-                } else if (currentAlertType && trimmed.startsWith('>')) {
-                    // Alert 内容行：以 > 开头即可（可能是 "> " 或 ">内容"）
-                    alertLineTypes.set(i, currentAlertType);
-                } else if (trimmed.length > 0 && !trimmed.startsWith('>')) {
-                    // 遇到非空且不以 > 开头的行，Alert 块结束
-                    currentAlertType = null;
-                }
-            }
-        }
-
-        // 第二遍：添加装饰
-        let i = 1;
-        while (i <= doc.lines) {
-            // 如果是代码块行
-            if (codeBlockLines.has(i)) {
-                // 如果是 fence 行（```），为 fence 添加特殊样式并高亮语言名（如果有）
-                if (fenceLineLangs.has(i)) {
-                    const fenceLine = doc.line(i);
-                    const fenceText = fenceLine.text;
-                    const lang = fenceLineLangs.get(i);
-
-                    const fenceLineDeco = Decoration.line({
-                        attributes: {
-                            style: 'background: #f6f8fa; color: #6a737d; font-style: italic; padding: 4px 8px;'
-                        }
-                    });
-                    builder.add(fenceLine.from, fenceLine.from, fenceLineDeco);
-
-                    if (lang) {
-                        // 在原始文本中查找语言位置（从 ``` 之后）
-                        const backtickIndex = fenceText.indexOf('```');
-                        let langIndex = -1;
-                        if (backtickIndex >= 0) {
-                            langIndex = fenceText.indexOf(lang, backtickIndex + 3);
-                        }
-                        if (langIndex >= 0) {
-                            builder.add(fenceLine.from + langIndex, fenceLine.from + langIndex + lang.length, Decoration.mark({
-                                attributes: {
-                                    style: 'color: #d73a49; font-weight: 700;'
-                                }
-                            }));
-                        }
-                    }
-                }
-                i++;
                 continue;
             }
-
-            const line = doc.line(i);
-            const text = line.text;
-            
-            // 检测表格分隔行
-            if (pluginSettings.enableTableRendering && text.includes('|') && text.includes('-')) {
-                // 简单检测：包含 | 和 - 可能是表格分隔行
-                const isDivider = /^\s*\|?[\s:]*-+[\s:]*(\|[\s:]*-+[\s:]*)+\|?\s*$/.test(text);
-                if (isDivider) {
-                    // 找表格边界
-                    let tableStart = i;
-                    let tableEnd = i;
-                    
-                    // 向前找表头（最多找10行）
-                    for (let j = i - 1; j >= Math.max(1, i - 10); j--) {
-                        const prevText = doc.line(j).text;
-                        if (prevText.includes('|')) {
-                            tableStart = j;
-                        } else {
-                            break;
-                        }
+            if (inGlobalCode) continue;
+            // ── Alert 检测（优先于普通引用块）──────────────────────────────────
+            if (pluginSettings.enableGitHubAlerts && isQuoteLine) {
+                const inner = stripQuotePrefix(text, depth);
+                const alertMatch = inner.match(/^\[!(\w+)\]/);
+                if (alertMatch) {
+                    for (const el of pendingEmptyLines) {
+                        alertLineInfo.set(el, { type: alertMatch[1].toUpperCase(), depth });
                     }
-                    
-                    // 向后找表格内容（最多找50行）
-                    for (let j = i + 1; j <= Math.min(doc.lines, i + 50); j++) {
-                        const nextText = doc.line(j).text;
-                        if (nextText.includes('|')) {
-                            tableEnd = j;
-                        } else {
-                            break;
-                        }
-                    }
-                    
-                    // 渲染表格
-                    for (let j = tableStart; j <= tableEnd; j++) {
-                        const tableLine = doc.line(j);
-                        const isDividerLine = (j === i);
-                        const isHeader = (j < i);
-                        const dataRowIndex = j > i ? (j - i - 1) : 0;
-                        const isEven = dataRowIndex % 2 === 0;
-                        
-                        let style = '';
-                        if (isDividerLine) {
-                            style = 'height: 4px; line-height: 4px; font-size: 2px; color: #d0d7de; background-color: #e1e4e8; border-top: 1px solid #d0d7de; border-bottom: 1px solid #d0d7de;';
-                        } else if (isHeader) {
-                            style = 'font-size: 1.05em; font-weight: 600; background-color: #f6f8fa; padding: 10px 0;';
-                            if (j === tableStart) style += ' border-top: 2px solid #d0d7de;';
-                        } else {
-                            const bgColor = isEven ? '#ffffff' : '#f8f8f8';
-                            style = `background-color: ${bgColor}; padding: 8px 0;`;
-                            if (j === tableEnd) style += ' border-bottom: 2px solid #d0d7de;';
-                        }
-                        
-                        builder.add(tableLine.from, tableLine.from, Decoration.line({
-                            attributes: { style }
-                        }));
-                        
-                        // 简化管道符样式
-                        const lineText = tableLine.text;
-                        for (let k = 0; k < lineText.length; k++) {
-                            if (lineText[k] === '|') {
-                                const pipeStyle = isDividerLine
-                                    ? 'color: transparent; background: linear-gradient(to right, transparent 40%, #c0c5cc 40%, #c0c5cc 60%, transparent 60%); padding: 0 6px;'
-                                    : 'color: transparent; border-left: 2px solid #c0c5cc; padding: 0 7px; margin: 0 3px;';
-                                builder.add(tableLine.from + k, tableLine.from + k + 1, Decoration.mark({
-                                    attributes: { style: pipeStyle }
-                                }));
-                            }
-                        }
-                    }
-                    
-                    i = tableEnd + 1;
+                    pendingEmptyLines.length = 0;
+                    pendingType = null;
+                    currentAlert = { type: alertMatch[1].toUpperCase(), depth };
+                    currentBQDepth = 0;
+                    alertLineInfo.set(i, currentAlert);
                     continue;
                 }
             }
-            
-            // GitHub Alerts
-            if (alertLineTypes.has(i)) {
-                const alertType = alertLineTypes.get(i)!;
-                const config = alertTypes[alertType as keyof typeof alertTypes];
-                
-                if (config) {
-                    const lineDeco = Decoration.line({
-                        attributes: {
-                            style: `border-radius: 4px; padding: 1px 15px; border-left: 4px solid ${config.color}; background-color: ${config.bgColor}; line-height: 1.6;`
+            if (currentAlert) {
+                if (isQuoteLine && depth >= currentAlert.depth) {
+                    for (const el of pendingEmptyLines) alertLineInfo.set(el, currentAlert);
+                    pendingEmptyLines.length = 0;
+                    pendingType = null;
+                    alertLineInfo.set(i, currentAlert);
+                } else if (isEmpty) {
+                    pendingEmptyLines.push(i);
+                    pendingType = 'alert';
+                } else {
+                    // 退出当前 alert，检查是否属于外层引用块
+                    if (isQuoteLine) {
+                        // 该行是引用块，记录为外层 blockquote
+                        for (const el of pendingEmptyLines) {
+                            blockquoteLineDepths.set(el, currentBQDepth || depth);
                         }
-                    });
-                    builder.add(line.from, line.from, lineDeco);
-                    
-                    // 如果是标题行，高亮类型文本（允许前导空格）
-                    const trimmed = text.trimStart();
-                    if (trimmed.startsWith('> [!')) {
-                        const typeStart = line.from + text.indexOf('[!') + 2;
-                        const typeEnd = line.from + text.indexOf(']');
-                        if (typeEnd > typeStart) {
-                            const markDeco = Decoration.mark({
-                                attributes: {
-                                    style: `color: ${config.color}; font-weight: 600; font-size: 0.85em;`
-                                }
-                            });
-                            builder.add(typeStart, typeEnd, markDeco);
+                        pendingEmptyLines.length = 0;
+                        pendingType = null;
+                        currentBQDepth = depth;
+                        blockquoteLineDepths.set(i, depth);
+                    } else {
+                        pendingEmptyLines.length = 0;
+                        pendingType = null;
+                    }
+                    currentAlert = null;
+                }
+            }
+            // ── 普通引用块检测 ──────────────────────────────────────────────────
+            if (pluginSettings.enableBlockquoteStyles && !currentAlert) {
+                if (isQuoteLine) {
+                    for (const el of pendingEmptyLines) {
+                        blockquoteLineDepths.set(el, currentBQDepth || depth);
+                    }
+                    pendingEmptyLines.length = 0;
+                    pendingType = null;
+                    currentBQDepth = depth;
+                    blockquoteLineDepths.set(i, depth);
+                } else if (isEmpty && currentBQDepth > 0) {
+                    pendingEmptyLines.push(i);
+                    pendingType = 'blockquote';
+                } else if (!isEmpty) {
+                    pendingEmptyLines.length = 0;
+                    pendingType = null;
+                    currentBQDepth = 0;
+                }
+            }
+        }
+        // 嵌套引用块颜色配置
+        const bqDepthStyles = [
+            { border: '#e95f59', bg: '#fdefee' },  // depth 1
+            { border: '#d97706', bg: '#fef3e2' },  // depth 2
+            { border: '#7c3aed', bg: '#f5f0ff' },  // depth 3
+            { border: '#0969da', bg: '#eef4ff' },  // depth 4+
+        ];
+        function getBQStyle(d: number) {
+            return bqDepthStyles[Math.min(d - 1, bqDepthStyles.length - 1)];
+        }
+        // ── 辅助：给引用行的各层 > 字符添加对应层级颜色的 mark ──────────────────
+        function addQuoteCharMarks(lineFrom: number, lineNum: number) {
+            const positions = quoteCharPositions.get(lineNum);
+            if (!positions) return;
+            for (let d = 0; d < positions.length; d++) {
+                const style = getBQStyle(d + 1);
+                const col = positions[d];
+                builder.add(
+                    lineFrom + col,
+                    lineFrom + col + 1,
+                    Decoration.mark({ attributes: { style: `background-color: ${style.bg}; color: ${style.border};` } })
+                );
+            }
+        }
+        // ── 第二遍：添加装饰 ────────────────────────────────────────────────────
+
+        let i = 1;
+        while (i <= doc.lines) {
+            const line = doc.line(i);
+            const text = line.text;
+            // 引用块内的代码块行
+            if (quotedCodeLines.has(i)) {
+                const info = quotedCodeLines.get(i)!;
+                const bqStyle = getBQStyle(info.quoteDepth);
+                const paddingLeft = 15 + (info.quoteDepth - 1) * 16;
+                const codeBg = info.isFence ? bqStyle.bg : '#f0f0f0';
+                builder.add(line.from, line.from, Decoration.line({
+                    attributes: {
+                        style: `padding: 1px ${paddingLeft}px; border-left: 4px solid ${bqStyle.border}; background-color: ${codeBg}; color: #6a737d; font-style: ${info.isFence ? 'italic' : 'normal'}; line-height: 1.6;`
+                    }
+                }));
+                addQuoteCharMarks(line.from, i);
+                if (info.isFence && info.lang) {
+                    const backtickIdx = text.indexOf('```');
+                    if (backtickIdx >= 0) {
+                        const langIdx = text.indexOf(info.lang, backtickIdx + 3);
+                        if (langIdx >= 0) {
+                            builder.add(
+                                line.from + langIdx,
+                                line.from + langIdx + info.lang.length,
+                                Decoration.mark({ attributes: { style: 'color: #d73a49; font-weight: 700;' } })
+                            );
                         }
                     }
                 }
                 i++;
                 continue;
             }
-            
+            // 全局代码块行
+            if (codeBlockLines.has(i)) {
+                if (fenceLineLangs.has(i)) {
+                    const lang = fenceLineLangs.get(i);
+                    builder.add(line.from, line.from, Decoration.line({
+                        attributes: { style: 'background: #f6f8fa; color: #6a737d; font-style: italic; padding: 4px 8px;' }
+                    }));
+                    if (lang) {
+                        const backtickIndex = text.indexOf('```');
+                        if (backtickIndex >= 0) {
+                            const langIndex = text.indexOf(lang, backtickIndex + 3);
+                            if (langIndex >= 0) {
+                                builder.add(
+                                    line.from + langIndex,
+                                    line.from + langIndex + lang.length,
+                                    Decoration.mark({ attributes: { style: 'color: #d73a49; font-weight: 700;' } })
+                                );
+                            }
+                        }
+                    }
+                }
+                i++;
+                continue;
+            }
+            // GitHub Alerts（含嵌套）
+            if (alertLineInfo.has(i)) {
+                const info = alertLineInfo.get(i)!;
+                const config = alertTypes[info.type as keyof typeof alertTypes];
+                if (config) {
+                    const depthAlpha = Math.min(0.06 + (info.depth - 1) * 0.04, 0.22);
+                    const bgColor = config.bgColor.replace(/[\d.]+\)$/, `${depthAlpha})`);
+                    const paddingLeft = 15 + (info.depth - 1) * 16;
+                    builder.add(line.from, line.from, Decoration.line({
+                        attributes: {
+                            style: `border-radius: 4px; padding: 1px ${paddingLeft}px; border-left: 4px solid ${config.color}; background-color: ${bgColor}; line-height: 1.6;`
+                        }
+                    }));
+                    if (line.to > line.from) {
+                        builder.add(line.from, line.to, Decoration.mark({ attributes: { style: 'color: #333333 !important;' } }));
+                    }
+                    addQuoteCharMarks(line.from, i);
+                    const bracketIdx = text.indexOf('[!');
+                    if (bracketIdx >= 0) {
+                        const closeIdx = text.indexOf(']', bracketIdx);
+                        if (closeIdx > bracketIdx) {
+                            builder.add(
+                                line.from + bracketIdx + 2,
+                                line.from + closeIdx,
+                                Decoration.mark({ attributes: { style: `color: ${config.color}; font-weight: 600; font-size: 0.85em;` } })
+                            );
+                        }
+                    }
+                }
+                i++;
+                continue;
+            }
             // 标题 (h1-h6)
             if (pluginSettings.enableHeadingStyles) {
                 const headingMatch = text.match(/^(#{1,6})\s/);
                 if (headingMatch) {
                     const level = headingMatch[1].length as keyof typeof headingStyles;
                     const style = headingStyles[level];
-                    
                     if (style) {
-                        const lineDeco = Decoration.line({
-                            attributes: {
-                                style: style
-                            }
-                        });
-                        builder.add(line.from, line.from, lineDeco);
+                        builder.add(line.from, line.from, Decoration.line({ attributes: { style } }));
                         i++;
                         continue;
                     }
                 }
             }
-            
-            // 普通引用块 (blockquote) - 允许前导空格
-            const trimmed = text.trimStart();
-            if (pluginSettings.enableBlockquoteStyles && trimmed.startsWith('> ') && trimmed.length > 2) {
-                const lineDeco = Decoration.line({
+            // 普通引用块（含嵌套）
+            if (pluginSettings.enableBlockquoteStyles && blockquoteLineDepths.has(i)) {
+                const d = blockquoteLineDepths.get(i)!;
+                const bqStyle = getBQStyle(d);
+                const paddingLeft = 15 + (d - 1) * 16;
+                builder.add(line.from, line.from, Decoration.line({
                     attributes: {
-                        style: `border-radius: 4px; padding: 1px 15px; border-left: 4px solid #e95f59; background-color: #fdefee; color: #333333; line-height: 1.6;`
+                        style: `border-radius: 4px; padding: 1px ${paddingLeft}px; border-left: 4px solid ${bqStyle.border}; background-color: ${bqStyle.bg}; color: #333333; line-height: 1.6;`
                     }
-                });
-                builder.add(line.from, line.from, lineDeco);
+                }));
+                if (line.to > line.from) {
+                    builder.add(line.from, line.to, Decoration.mark({ attributes: { style: 'color: #333333 !important;' } }));
+                }
+                addQuoteCharMarks(line.from, i);
             }
-            
             i++;
         }
-
         return builder.finish();
-
-        /* 原有代码暂时注释
-        // 一次性扫描所有代码块和 Alert 块，标记特殊行
-        const codeBlockLines = new Set<number>();
-        const alertLineTypes = new Map<number, string>(); // 行号 -> Alert 类型
-        
-        let inCodeBlock = false;
-        let currentAlertType: string | null = null;
-        
-        for (let i = 1; i <= doc.lines; i++) {
-            const line = doc.line(i);
-            const text = line.text.trim();
-            
-            // 扫描代码块
-            if (text.startsWith('```')) {
-                inCodeBlock = !inCodeBlock;
-                codeBlockLines.add(i);
-            } else if (inCodeBlock) {
-                codeBlockLines.add(i);
-            }
-            
-            // 扫描 Alert 块（不在代码块内时）
-            if (!inCodeBlock && pluginSettings.enableGitHubAlerts) {
-                const alertMatch = line.text.match(/^>\s*\[!(\w+)\]/);
-                if (alertMatch) {
-                    // Alert 开始
-                    currentAlertType = alertMatch[1].toUpperCase();
-                    alertLineTypes.set(i, currentAlertType);
-                } else if (currentAlertType && line.text.match(/^>\s+\S/)) {
-                    // Alert 内容行
-                    alertLineTypes.set(i, currentAlertType);
-                } else if (!line.text.match(/^>\s/)) {
-                    // Alert 结束
-                    currentAlertType = null;
-                }
-            }
-        }
-
-        let i = 1;
-        while (i <= doc.lines) {
-            const line = doc.line(i);
-            const text = line.text;
-            
-            // 如果在代码块内，跳过所有样式应用
-            if (codeBlockLines.has(i)) {
-                i++;
-                continue;
-            }
-            
-            // 检查是否是表格分隔行，如果是则处理整个表格
-            // 暂时禁用表格渲染以排查问题
-            if (false && pluginSettings.enableTableRendering && text.match(/^\s*\|?[\s:]*-+[\s:]*\|/)) {
-                const tableEndLine = this.renderTable(doc, builder, i, codeBlockLines);
-                i = tableEndLine + 1;
-                continue;
-            }
-
-            // 检测 GitHub Alert（使用预扫描的结果）
-            if (pluginSettings.enableGitHubAlerts && alertLineTypes.has(i)) {
-                const alertType = alertLineTypes.get(i)!;
-                const config = alertTypes[alertType as keyof typeof alertTypes];
-
-                if (config) {
-                    // 为整行添加样式
-                    const lineDeco = Decoration.line({
-                        attributes: {
-                            style: `border-radius: 4px; padding: 1px 15px; border-left: 4px solid ${config.color}; background-color: ${config.bgColor}; line-height: 1.6;`
-                        }
-                    });
-                    builder.add(line.from, line.from, lineDeco);
-
-                    // 如果是标题行，为 TYPE 文本添加样式
-                    const alertMatch = text.match(/^>\s*\[!(\w+)\]/);
-                    if (alertMatch) {
-                        const typeStart = line.from + text.indexOf('[!') + 2;
-                        const typeEnd = line.from + text.indexOf(']');
-                        if (typeEnd > typeStart) {
-                            const markDeco = Decoration.mark({
-                                attributes: {
-                                    style: `color: ${config.color}; font-weight: 500; font-size: 0.85em; font-weight: bold;`
-                                }
-                            });
-                            builder.add(typeStart, typeEnd, markDeco);
-                        }
-                    }
-                }
-                i++;
-                continue;
-            }
-
-            // 检测标题 (h1-h6)
-            if (pluginSettings.enableHeadingStyles) {
-                const headingMatch = text.match(/^(#{1,6})\s+(.+)/);
-                if (headingMatch) {
-                    const level = headingMatch[1].length as keyof typeof headingStyles;
-                    const style = headingStyles[level];
-                    
-                    if (style) {
-                        const lineDeco = Decoration.line({
-                            attributes: {
-                                style: style
-                            }
-                        });
-                        builder.add(line.from, line.from, lineDeco);
-                    }
-                    continue;
-                }
-            }
-
-            // 检测普通引用块 (blockquote) - 只有非 alert 的引用
-            if (pluginSettings.enableBlockquoteStyles && text.match(/^>\s/)) {
-                const lineDeco = Decoration.line({
-                    attributes: {
-                        style: `border-radius: 4px; padding: 1px 15px; border-left: 4px solid #e95f59; background-color: #fdefee; color: #333333; line-height: 1.6;`
-                    }
-                });
-                builder.add(line.from, line.from, lineDeco);
-            }
-            
-            i++;
-        }
-
-        return builder.finish();
-        */
     }
+
 
     // 渲染单个表格，返回表格结束行号
     renderTable(doc: any, builder: RangeSetBuilder<Decoration>, dividerLine: number, codeBlockLines: Set<number>): number {
@@ -867,9 +843,10 @@ export default (context: { contentScriptId: string, postMessage: any }) => {
             });
             
             codeMirrorWrapper.addExtension([
-                customTheme, 
-                decorationPlugin, 
-                headingKeymap, 
+                customTheme,
+                decorationPlugin,
+                pluginSettings.enableTableRendering ? tableRenderPlugin : [],
+                headingKeymap,
                 tableKeymap,
                 mathKeymap,
                 blockquoteKeymap,
