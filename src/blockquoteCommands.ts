@@ -1,6 +1,14 @@
 import { EditorView } from '@codemirror/view';
 import { EditorSelection } from '@codemirror/state';
 
+// 剥离列表符号，返回 [缩进, 列表符号+空格, 剩余内容]
+function stripListMarker(text: string): [string, string, string] {
+    const m = text.match(/^(\s*)((?:[-*+]|\d+\.)\s+)(.*)/);
+    if (m) return [m[1], m[2], m[3]];
+    const m2 = text.match(/^(\s*)(.*)/);
+    return [m2![1], '', m2![2]];
+}
+
 // 切换 GitHub Alert 的命令
 export function toggleAlert(alertType: 'NOTE' | 'TIP' | 'WARNING' | 'IMPORTANT') {
     return (view: EditorView) => {
@@ -9,35 +17,31 @@ export function toggleAlert(alertType: 'NOTE' | 'TIP' | 'WARNING' | 'IMPORTANT')
         const changes: any[] = [];
 
         for (const range of selection.ranges) {
+
             const line = state.doc.lineAt(range.from);
             const lineText = line.text;
-            
-            // 提取前导空格/缩进
-            const leadingSpaceMatch = lineText.match(/^(\s*)(.*)/);
-            if (!leadingSpaceMatch) continue;
-            
-            const leadingSpaces = leadingSpaceMatch[1];
-            const contentAfterSpaces = leadingSpaceMatch[2];
-            
+            // 提取前导空格、列表符号、内容
+            const [leadingSpaces, listMarker, contentAfterMarker] = stripListMarker(lineText);
+            // 列表项内的引用块缩进 = 原缩进 + 列表符号宽度（用空格替代）
+            const effectiveIndent = listMarker
+                ? leadingSpaces + ' '.repeat(listMarker.length)
+                : leadingSpaces;
+            const contentAfterSpaces = contentAfterMarker;
             let newText: string;
             let newCursorPos: number;
-            
             // 检查是否已经是同类型的 Alert
             const alertMatch = contentAfterSpaces.match(/^>\s*\[!(\w+)\]\s*(.*)$/);
-            
             if (alertMatch && alertMatch[1].toUpperCase() === alertType) {
                 // 已经是相同类型的 Alert，移除 Alert 标记
                 const content = alertMatch[2];
-                newText = leadingSpaces + (content ? '> ' + content : '');
+                newText = effectiveIndent + (content ? '> ' + content : '');
                 const removedChars = lineText.length - newText.length;
-                newCursorPos = line.from + Math.max(leadingSpaces.length, range.from - line.from - removedChars);
+                newCursorPos = line.from + Math.max(effectiveIndent.length, range.from - line.from - removedChars);
             } else if (alertMatch) {
                 // 是其他类型的 Alert，替换类型
                 const content = alertMatch[2];
-                newText = leadingSpaces + `> [!${alertType}]` + (content ? ' ' + content : '');
-                const oldAlertLength = alertMatch[1].length;
-                const newAlertLength = alertType.length;
-                const diff = newAlertLength - oldAlertLength;
+                newText = effectiveIndent + `> [!${alertType}]` + (content ? ' ' + content : '');
+                const diff = alertType.length - alertMatch[1].length;
                 newCursorPos = range.from + diff;
             } else {
                 // 检查是否是普通引用块
@@ -45,18 +49,12 @@ export function toggleAlert(alertType: 'NOTE' | 'TIP' | 'WARNING' | 'IMPORTANT')
                 if (quoteMatch) {
                     // 是普通引用块，转换为 Alert
                     const content = quoteMatch[1];
-                    newText = leadingSpaces + `> [!${alertType}]` + (content ? ' ' + content : '');
-                    const addedChars = newText.length - lineText.length;
-                    newCursorPos = range.from + addedChars;
+                    newText = effectiveIndent + `> [!${alertType}]` + (content ? ' ' + content : '');
+                    newCursorPos = line.from + newText.length;
                 } else {
-                    // 不是引用块，添加 Alert
-                    newText = leadingSpaces + `> [!${alertType}] ` + contentAfterSpaces;
-                    const cursorOffsetInLine = range.from - line.from;
-                    if (cursorOffsetInLine <= leadingSpaces.length) {
-                        newCursorPos = line.from + leadingSpaces.length + `> [!${alertType}] `.length;
-                    } else {
-                        newCursorPos = range.from + `> [!${alertType}] `.length;
-                    }
+                    // 不是引用块，添加 Alert（列表项时替换列表符号为缩进）
+                    newText = effectiveIndent + `> [!${alertType}] ` + contentAfterSpaces;
+                    newCursorPos = line.from + effectiveIndent.length + `> [!${alertType}] `.length;
                 }
             }
             
