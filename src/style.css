@@ -48,3 +48,64 @@
   display: inline-block;
   vertical-align: middle;
 }
+
+/* ─── 表格行装饰样式 ─────────────────────────────────────────────────────── */
+
+/* 表头行 */
+.cm-editor .cm-tbl-header {
+  background-color: var(--table-header-bg-color) !important;
+  font-weight: 600;
+  border-bottom: 1px solid var(--table-border-color);
+  white-space: nowrap;
+}
+
+/* 表头第一行：顶部边框 */
+.cm-editor .cm-tbl-first {
+  border-top: 2px solid var(--table-border-color);
+}
+
+/* 分隔行：压缩高度，只显示一条线 */
+.cm-editor .cm-tbl-divider {
+  line-height: 3px !important;
+  font-size: 3px !important;
+  background-color: var(--table-border-color) !important;
+  border-top: 1px solid var(--table-border-color);
+  border-bottom: 1px solid var(--table-border-color);
+}
+
+/* 分隔行管道符：隐藏 */
+.cm-editor .cm-tbl-divider-pipe {
+  color: transparent !important;
+  font-size: 0 !important;
+}
+
+/* 分隔行单元格内容：隐藏 */
+.cm-editor .cm-tbl-divider-cell {
+  color: transparent !important;
+  font-size: 0 !important;
+}
+
+/* 数据行 */
+.cm-editor .cm-tbl-body {
+  background-color: var(--table-bg-color);
+  border-bottom: 1px solid var(--table-border-color);
+  white-space: nowrap;
+}
+
+/* 数据行交替色 */
+.cm-editor .cm-tbl-even {
+  background-color: var(--table-n2-bg-color) !important;
+}
+
+/* 最后一行底部边框 */
+.cm-editor .cm-tbl-last-body {
+  border-bottom: 2px solid var(--table-border-color) !important;
+}
+
+/* 管道符：模拟竖线 */
+.cm-editor .cm-tbl-pipe {
+  color: transparent !important;
+  border-left: 2px solid var(--table-border-color);
+  margin: 0 4px;
+  padding: 0;
+}
