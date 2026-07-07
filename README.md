@@ -2,11 +2,11 @@
 
 Enhanced editor styling and productivity features for Joplin notes. Support English and Chinese language.
 
+![alt text](assets/image-4.png)
+![alt text](assets/image-5.png)
+![alt text](assets/image-1.png)
 
-![alt text](image-4.png)
-![alt text](image-5.png)
-![alt text](image-1.png)
-
+The experience will be better when used with my [newly released plugin](https://joplinapp.org/plugins/plugin/com.github.full-notebook-view/?search=maintainer%3D%22rinchord%22%20max-results%3D20).
 
 ## Features
 
@@ -38,6 +38,7 @@ Quick keyboard shortcuts for toggling heading levels:
 - Works on the current line where your cursor is positioned
 
 ### Inline Math Shortcuts
+
 Quick keyboard shortcut for adding inline math notation:
 - `Ctrl+$` - Toggle `$` symbols around selected text for inline math (LaTeX)
 - Select any text and press `Ctrl+$` to wrap it with `$...$`
@@ -112,13 +113,9 @@ npm run dist
 
 The plugin package will be generated in the `publish/` directory.
 
-For more development information, see [GENERATOR_DOC.md](./GENERATOR_DOC.md)
+For more development information, see [GENERATOR_DOC.md](./documents/GENERATOR_DOC.md)
 
-## TODO
 
-- 把指定笔记的.md源文件和该笔记的附件导出到同一个指定目录，确保附件的文件内超链接也被同步更新，以便于在外部编辑器直接查看。支持多选笔记，多选笔记时将有两种行为：所有笔记源文件和附件都导入同一目录\以文件夹为单位导出各笔记，保留Front Matter，这个行为将存在一个可配置选项，可以在插件设置中更改。
-
-- 【无法实现】列表的行溢出缩进应与当前层级缩进一致，并提供配置项
 
 ## License
 
